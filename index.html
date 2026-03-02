@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WriteForPiano — Original Piano Music & Visual Art</title>
+  <meta name="description" content="Original piano compositions paired with AI-generated visual art. A creative project by WriteForPiano." />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Nunito+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    /* =============================================
+       THEME VARIABLES
+       ============================================= */
+    :root {
+      --bg-deep:        #0e0c0b;
+      --bg-sidebar:     #12100e;
+      --bg-sidebar-alt: #1a1714;
+      --border-subtle:  #2a2420;
+      --border-hover:   rgba(196, 112, 63, 0.45);
+
+      --text-primary:   #d4cdc6;
+      --text-heading:   #ece5de;
+      --text-muted:     #8a7e74;
+      --text-faint:     #564e46;
+
+      --accent:         #c4703f;
+      --accent-blue:    #8a9299;
+      --accent-dim:     rgba(196, 112, 63, 0.15);
+      --accent-glow:    rgba(196, 112, 63, 0.07);
+      --metallic:       #9ba4ab;
+
+      --font-display:   'Playfair Display', Georgia, serif;
+      --font-body:      'Nunito Sans', system-ui, sans-serif;
+
+      --sidebar-width:  300px;
+      --header-height:  72px;
+    }
+
+    /* =============================================
+       RESET & BASE
+       ============================================= */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      font-weight: 300;
+      line-height: 1.6;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* subtle noise overlay */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 10000;
+    }
+
+    a { color: var(--accent); text-decoration: none; transition: color .2s; }
+    a:hover { color: var(--accent-blue); }
+    img { display: block; max-width: 100%; }
+
+    /* =============================================
+       TOP HEADER BAR
+       ============================================= */
+    .header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: var(--header-height);
+      background: linear-gradient(180deg, rgba(14,12,11,0.97) 60%, rgba(14,12,11,0.85));
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      padding: 0 2rem;
+      z-index: 1000;
+    }
+
+    .header__logo-group {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+    }
+
+    .header__logo-mark { width: 42px; height: 42px; flex-shrink: 0; }
+
+    .header__title {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-heading);
+      letter-spacing: 0.01em;
+    }
+
+    .header__title span { color: var(--accent); }
+
+    /* Now-playing mini bar in header */
+    .header__now-playing {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+      pointer-events: none;
+    }
+
+    .header__now-playing.active { opacity: 1; pointer-events: auto; }
+
+    .np__title {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      max-width: 200px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .np__btn {
+      width: 30px; height: 30px;
+      border: none; border-radius: 50%;
+      background: var(--accent);
+      color: var(--bg-deep);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: background .2s, transform .15s;
+    }
+    .np__btn:hover { background: var(--accent-blue); transform: scale(1.08); }
+    .np__btn svg { width: 14px; height: 14px; fill: var(--bg-deep); }
+
+    /* =============================================
+       MAIN LAYOUT: SIDEBAR + CONTENT
+       ============================================= */
+    .layout {
+      display: flex;
+      margin-top: var(--header-height);
+      min-height: calc(100vh - var(--header-height));
+    }
+
+    /* =============================================
+       LEFT SIDEBAR
+       ============================================= */
+    .sidebar {
+      width: var(--sidebar-width);
+      flex-shrink: 0;
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border-subtle);
+      padding: 2rem 1.5rem 3rem;
+      overflow-y: auto;
+      position: sticky;
+      top: var(--header-height);
+      height: calc(100vh - var(--header-height));
+      display: flex;
+      flex-direction: column;
+      gap: 1.8rem;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border-subtle) transparent;
+    }
+
+    .sidebar::-webkit-scrollbar { width: 5px; }
+    .sidebar::-webkit-scrollbar-track { background: transparent; }
+    .sidebar::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 3px; }
+
+    /* Sidebar section blocks */
+    .sb-section {
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 1.5rem;
+    }
+    .sb-section:last-child { border-bottom: none; }
+
+    .sb-section__heading {
+      font-family: var(--font-display);
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.7rem;
+    }
+
+    .sb-section__placeholder {
+      font-size: 0.8rem;
+      color: var(--text-faint);
+      font-style: italic;
+      padding: 0.6rem 0.8rem;
+      background: var(--bg-sidebar-alt);
+      border-radius: 6px;
+      border: 1px dashed var(--border-subtle);
+    }
+
+    /* Sidebar links */
+    .sb-links {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+
+    .sb-links a {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.5rem 0.7rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 400;
+      color: var(--text-primary);
+      transition: background .2s, color .2s;
+    }
+
+    .sb-links a:hover {
+      background: var(--accent-dim);
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .sb-links svg {
+      width: 18px; height: 18px;
+      flex-shrink: 0;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* Social buttons row */
+    .sb-socials { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+
+    .sb-socials a {
+      width: 38px; height: 38px;
+      border-radius: 8px;
+      border: 1px solid var(--border-subtle);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-muted);
+      transition: border-color .2s, color .2s, background .2s;
+    }
+
+    .sb-socials a:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-glow);
+      text-decoration: none;
+    }
+
+    .sb-socials svg { width: 18px; height: 18px; fill: currentColor; }
+
+    /* Feedback form */
+    .fb-form { display: flex; flex-direction: column; gap: 0.6rem; }
+
+    .fb-form textarea {
+      width: 100%;
+      min-height: 90px;
+      background: var(--bg-sidebar-alt);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      font-size: 0.82rem;
+      padding: 0.65rem 0.8rem;
+      resize: vertical;
+      transition: border-color .2s;
+    }
+
+    .fb-form textarea::placeholder { color: var(--text-faint); }
+    .fb-form textarea:focus { outline: none; border-color: var(--accent); }
+
+    .fb-form button {
+      align-self: flex-start;
+      padding: 0.5rem 1.2rem;
+      background: var(--accent);
+      color: var(--bg-deep);
+      border: none;
+      border-radius: 6px;
+      font-family: var(--font-body);
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s, transform .15s;
+    }
+
+    .fb-form button:hover { background: var(--accent-blue); }
+    .fb-form button:active { transform: scale(0.96); }
+
+    .fb-success { font-size: 0.8rem; color: var(--accent); display: none; }
+
+    /* =============================================
+       MAIN CONTENT AREA — SEAMLESS IMAGE GRID
+       ============================================= */
+    .content { flex: 1; min-width: 0; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      /* NO GAP — seamless collage */
+    }
+
+    /* Individual grid cell */
+    .cell {
+      position: relative;
+      aspect-ratio: 1 / 1;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .cell img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.5s ease, filter 0.4s ease;
+    }
+
+    /* ── INSET BORDER: lives INSIDE the image, not outside ── */
+    .cell::after {
+      content: '';
+      position: absolute;
+      /* inset from the edges so it's clearly inside the image */
+      top: 6px; left: 6px; right: 6px; bottom: 6px;
+      border: 2px solid transparent;
+      border-radius: 2px;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .cell:hover::after {
+      border-color: transparent;
+      box-shadow: inset 0 0 40px rgba(196, 112, 63, 0.35), inset 0 0 80px rgba(196, 112, 63, 0.12);
+    }
+
+    .cell:hover img {
+      transform: scale(1.01);
+    }
+
+    /* Overlay with title + play icon */
+    .cell__overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(0deg, rgba(14,12,11,0.8) 0%, rgba(14,12,11,0.15) 45%, transparent 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: flex-start;
+      padding: 1.2rem;
+      opacity: 0;
+      transition: opacity 0.35s ease;
+      z-index: 1;
+    }
+
+    .cell:hover .cell__overlay { opacity: 1; }
+
+    .cell__title {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-heading);
+      margin-bottom: 0.15rem;
+    }
+
+    .cell__sub {
+      font-size: 0.75rem;
+      color: var(--metallic);
+    }
+
+    .cell__play {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%) scale(0.85);
+      width: 54px; height: 54px;
+      border-radius: 50%;
+      background: rgba(196, 112, 63, 0.85);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0;
+      transition: opacity 0.35s ease, transform 0.35s ease;
+      z-index: 3;
+    }
+
+    .cell__play svg { width: 22px; height: 22px; fill: var(--bg-deep); margin-left: 2px; }
+
+    .cell:hover .cell__play {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    /* Active / currently playing state */
+    .cell.is-playing::after {
+      border-color: var(--accent) !important;
+      top: 6px; left: 6px; right: 6px; bottom: 6px;
+    }
+
+    .cell.is-playing .cell__play {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+      background: rgba(138, 146, 153, 0.9);
+    }
+
+    .cell.is-playing .cell__overlay { opacity: 1; }
+
+    /* EQ bars animation shown inside the play circle when active */
+    .eq-bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      height: 18px;
+    }
+
+    .eq-bars span {
+      display: block;
+      width: 3px;
+      background: var(--bg-deep);
+      border-radius: 1px;
+      animation: eqBounce 0.8s ease-in-out infinite alternate;
+    }
+
+    .eq-bars span:nth-child(1) { height: 8px;  animation-delay: 0s; }
+    .eq-bars span:nth-child(2) { height: 14px; animation-delay: 0.15s; }
+    .eq-bars span:nth-child(3) { height: 10px; animation-delay: 0.3s; }
+    .eq-bars span:nth-child(4) { height: 16px; animation-delay: 0.1s; }
+
+    @keyframes eqBounce {
+      0%   { height: 4px; }
+      100% { height: 18px; }
+    }
+
+    /* =============================================
+       MOBILE SIDEBAR TOGGLE
+       ============================================= */
+    .mobile-toggle {
+      display: none;
+      position: fixed;
+      bottom: 1.2rem; left: 1.2rem;
+      z-index: 1001;
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-sidebar);
+      color: var(--accent);
+      cursor: pointer;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,.4);
+    }
+
+    .mobile-toggle svg {
+      width: 20px; height: 20px;
+      stroke: currentColor; fill: none; stroke-width: 2;
+      stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    /* =============================================
+       RESPONSIVE
+       ============================================= */
+    @media (max-width: 900px) {
+      .sidebar {
+        position: fixed;
+        left: -320px;
+        top: var(--header-height);
+        width: 300px;
+        z-index: 999;
+        transition: left .35s ease;
+        box-shadow: 4px 0 30px rgba(0,0,0,.5);
+      }
+      .sidebar.open { left: 0; }
+      .mobile-toggle { display: flex; }
+    }
+
+    @media (max-width: 550px) {
+      .grid { grid-template-columns: repeat(2, 1fr); }
+      .header__title { font-size: 1.15rem; }
+      .np__title { max-width: 100px; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ============================================
+       HEADER
+       ============================================ -->
+  <header class="header">
+    <div class="header__logo-group">
+
+      <!-- ══════════════════════════════════════════
+           SVG LOGO — WriteForPiano
+           A circle enclosing stylized piano keys with
+           a pen-nib above them, representing the
+           "writing" of music. Designed to read well
+           at any size down to a 32px favicon or
+           social-media avatar.
+           ══════════════════════════════════════════ -->
+      <svg class="header__logo-mark" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-label="WriteForPiano logo">
+        <defs>
+          <linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#c4703f" />
+            <stop offset="100%" stop-color="#8a9299" />
+          </linearGradient>
+          <linearGradient id="kg" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#ece5de" />
+            <stop offset="100%" stop-color="#c4b5a6" />
+          </linearGradient>
+        </defs>
+
+        <!-- outer ring -->
+        <circle cx="60" cy="60" r="56" fill="none" stroke="url(#lg)" stroke-width="2.5" opacity="0.8"/>
+        <!-- soft inner fill -->
+        <circle cx="60" cy="60" r="48" fill="url(#lg)" opacity="0.1"/>
+
+        <!-- 7 white piano keys -->
+        <rect x="24"   y="42" width="9.5" height="40" rx="1.5" fill="url(#kg)" opacity="0.9"/>
+        <rect x="35.5" y="42" width="9.5" height="40" rx="1.5" fill="url(#kg)" opacity="0.9"/>
+        <rect x="47"   y="42" width="9.5" height="40" rx="1.5" fill="url(#kg)" opacity="0.9"/>
+        <rect x="58.5" y="42" width="9.5" height="40" rx="1.5" fill="url(#kg)" opacity="0.9"/>
+        <rect x="70"   y="42" width="9.5" height="40" rx="1.5" fill="url(#kg)" opacity="0.9"/>
+        <rect x="81.5" y="42" width="9.5" height="40" rx="1.5" fill="url(#kg)" opacity="0.85"/>
+        <rect x="93"   y="42" width="3"   height="40" rx="1"   fill="url(#kg)" opacity="0.5"/>
+
+        <!-- 5 black keys -->
+        <rect x="31"  y="42" width="6.5" height="25" rx="1" fill="#12100e"/>
+        <rect x="42.5" y="42" width="6.5" height="25" rx="1" fill="#12100e"/>
+        <rect x="65.5" y="42" width="6.5" height="25" rx="1" fill="#12100e"/>
+        <rect x="77"   y="42" width="6.5" height="25" rx="1" fill="#12100e"/>
+        <rect x="88.5" y="42" width="6.5" height="25" rx="1" fill="#12100e"/>
+
+        <!-- pen nib / quill pointing down at the keys — "writing" music -->
+        <path d="M60 16 L55.5 34 L60 30.5 L64.5 34 Z" fill="url(#lg)" opacity="0.9"/>
+        <line x1="60" y1="16" x2="60" y2="9" stroke="url(#lg)" stroke-width="1.8" stroke-linecap="round" opacity="0.55"/>
+      </svg>
+
+      <h1 class="header__title">Write<span>For</span>Piano</h1>
+    </div>
+
+    <!-- Now-playing mini widget -->
+    <div class="header__now-playing" id="nowPlaying">
+      <button class="np__btn" id="npBtn" aria-label="Pause">
+        <svg viewBox="0 0 24 24"><path d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg>
+      </button>
+      <span class="np__title" id="npTitle">—</span>
+    </div>
+  </header>
+
+  <!-- ============================================
+       LAYOUT: SIDEBAR + GRID
+       ============================================ -->
+  <div class="layout">
+
+    <!-- ── LEFT SIDEBAR ── -->
+    <aside class="sidebar" id="sidebar">
+
+      <div class="sb-section">
+        <h2 class="sb-section__heading">About WriteForPiano</h2>
+        <p class="sb-section__placeholder">Coming soon — the story behind the music and the art.</p>
+      </div>
+
+      <div class="sb-section">
+        <h2 class="sb-section__heading">About the Composer</h2>
+        <p class="sb-section__placeholder">Coming soon — meet the person behind the keys.</p>
+      </div>
+
+      <div class="sb-section">
+        <h2 class="sb-section__heading">Links</h2>
+        <ul class="sb-links">
+          <li>
+            <a href="#" title="Sheet Music">
+              <svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+              Sheet Music
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <div class="sb-section">
+        <h2 class="sb-section__heading">Connect</h2>
+        <div class="sb-socials">
+          <a href="#" title="YouTube" aria-label="YouTube">
+            <svg viewBox="0 0 24 24"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19.1c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.35 29 29 0 0 0-.46-5.33zM9.75 15.02V8.48l5.75 3.27-5.75 3.27z"/></svg>
+          </a>
+          <a href="#" title="Instagram" aria-label="Instagram">
+            <svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5" ry="5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="17.5" cy="6.5" r="1.2" fill="currentColor" stroke="none"/></svg>
+          </a>
+          <a href="#" title="TikTok" aria-label="TikTok">
+            <svg viewBox="0 0 24 24"><path d="M16.6 5.82A4.28 4.28 0 0 1 13.2 2h-3v13.4a2.6 2.6 0 0 1-2.6 2.6 2.6 2.6 0 0 1-2.6-2.6 2.6 2.6 0 0 1 2.6-2.6c.28 0 .56.04.82.12V9.2A6.34 6.34 0 0 0 4 15.4a6.34 6.34 0 0 0 6.4 6.6 6.34 6.34 0 0 0 6.4-6.6V9.24a7.86 7.86 0 0 0 4.6 1.48V7.08a4.28 4.28 0 0 1-4.8-1.26z"/></svg>
+          </a>
+          <a href="#" title="SoundCloud" aria-label="SoundCloud">
+            <svg viewBox="0 0 24 24"><path d="M1 18V14c0-.6.4-1 1-1s1 .4 1 1v4c0 .6-.4 1-1 1s-1-.4-1-1zm4 0V11c0-.6.4-1 1-1s1 .4 1 1v7c0 .6-.4 1-1 1s-1-.4-1-1zm4 0V9c0-.6.4-1 1-1s1 .4 1 1v9c0 .6-.4 1-1 1s-1-.4-1-1zm4 .5V7.5c0-.6.4-1 1-1h2.5A4.5 4.5 0 0 1 21 11v.5a4.5 4.5 0 0 1-4.5 4.5h-2.3c-.7 0-1.2-.5-1.2-1v-1.5 5z"/></svg>
+          </a>
+          <a href="#" title="X (Twitter)" aria-label="X (Twitter)">
+            <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+        </div>
+      </div>
+
+      <div class="sb-section">
+        <h2 class="sb-section__heading">Feedback</h2>
+        <form class="fb-form" id="feedbackForm" onsubmit="return false;">
+          <textarea id="feedbackText" placeholder="Share your thoughts, request a piece, or just say hello…" rows="4"></textarea>
+          <button type="button" id="feedbackBtn">Send Feedback</button>
+          <p class="fb-success" id="feedbackSuccess">Thank you! Your feedback has been received.</p>
+        </form>
+      </div>
+
+    </aside>
+
+    <!-- ── MAIN CONTENT: SEAMLESS IMAGE GRID ── -->
+    <main class="content">
+      <div class="grid" id="grid">
+
+        <!--
+          ╔══════════════════════════════════════════════════╗
+          ║  HOW TO ADD / REMOVE PIECES                      ║
+          ║                                                  ║
+          ║  Each .cell = one square in the 3-wide collage.  ║
+          ║                                                  ║
+          ║  To add a piece, copy any .cell block and set:   ║
+          ║    data-sc    → your SoundCloud track URL         ║
+          ║                 e.g. https://soundcloud.com/      ║
+          ║                 yourname/your-track-name          ║
+          ║    data-title → name of the piece                ║
+          ║    data-sub   → subtitle / duration              ║
+          ║    <img src>  → path to your AI-generated image  ║
+          ║                                                  ║
+          ║  The grid auto-expands downward. Just keep       ║
+          ║  adding .cell blocks in groups of 3 for          ║
+          ║  complete rows.                                  ║
+          ╚══════════════════════════════════════════════════╝
+        -->
+
+        <!-- ROW 1 -->
+        <div class="cell" data-sc="https://soundcloud.com/YOUR_USERNAME/track-1" data-title="Amber Light" data-sub="3:24 · Solo Piano">
+          <img src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&q=80" alt="Amber Light" />
+          <div class="cell__overlay">
+            <span class="cell__title">Amber Light</span>
+            <span class="cell__sub">3:24 · Solo Piano</span>
+          </div>
+          <div class="cell__play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+        </div>
+
+        <div class="cell" data-sc="https://soundcloud.com/YOUR_USERNAME/track-2" data-title="Still Water" data-sub="4:12 · Solo Piano">
+          <img src="https://images.unsplash.com/photo-1507838153414-b4b713384a76?w=600&q=80" alt="Still Water" />
+          <div class="cell__overlay">
+            <span class="cell__title">Still Water</span>
+            <span class="cell__sub">4:12 · Solo Piano</span>
+          </div>
+          <div class="cell__play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+        </div>
+
+        <div class="cell" data-sc="https://soundcloud.com/YOUR_USERNAME/track-3" data-title="Late Hours" data-sub="2:58 · Solo Piano">
+          <img src="https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=600&q=80" alt="Late Hours" />
+          <div class="cell__overlay">
+            <span class="cell__title">Late Hours</span>
+            <span class="cell__sub">2:58 · Solo Piano</span>
+          </div>
+          <div class="cell__play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+        </div>
+
+        <!-- ROW 2 -->
+        <div class="cell" data-sc="https://soundcloud.com/YOUR_USERNAME/track-4" data-title="Folded Paper" data-sub="5:01 · Solo Piano">
+          <img src="https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600&q=80" alt="Folded Paper" />
+          <div class="cell__overlay">
+            <span class="cell__title">Folded Paper</span>
+            <span class="cell__sub">5:01 · Solo Piano</span>
+          </div>
+          <div class="cell__play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+        </div>
+
+        <div class="cell" data-sc="https://soundcloud.com/YOUR_USERNAME/track-5" data-title="Morning Fog" data-sub="3:47 · Solo Piano">
+          <img src="https://images.unsplash.com/photo-1446185250204-f94591f7d702?w=600&q=80" alt="Morning Fog" />
+          <div class="cell__overlay">
+            <span class="cell__title">Morning Fog</span>
+            <span class="cell__sub">3:47 · Solo Piano</span>
+          </div>
+          <div class="cell__play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+        </div>
+
+        <div class="cell" data-sc="https://soundcloud.com/YOUR_USERNAME/track-6" data-title="Somewhere Close" data-sub="4:33 · Solo Piano">
+          <img src="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=80" alt="Somewhere Close" />
+          <div class="cell__overlay">
+            <span class="cell__title">Somewhere Close</span>
+            <span class="cell__sub">4:33 · Solo Piano</span>
+          </div>
+          <div class="cell__play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+        </div>
+
+        <!-- ROW 3 -->
+        <div class="cell" data-sc="https://soundcloud.com/YOUR_USERNAME/track-7" data-title="Glass Rain" data-sub="3:15 · Solo Piano">
+          <img src="https://images.unsplash.com/photo-1415201364774-f6f0bb35f28f?w=600&q=80" alt="Glass Rain" />
+          <div class="cell__overlay">
+            <span class="cell__title">Glass Rain</span>
+            <span class="cell__sub">3:15 · Solo Piano</span>
+          </div>
+          <div class="cell__play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+        </div>
+
+        <div class="cell" data-sc="https://soundcloud.com/YOUR_USERNAME/track-8" data-title="Deep Tide" data-sub="4:48 · Solo Piano">
+          <img src="https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=600&q=80" alt="Deep Tide" />
+          <div class="cell__overlay">
+            <span class="cell__title">Deep Tide</span>
+            <span class="cell__sub">4:48 · Solo Piano</span>
+          </div>
+          <div class="cell__play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+        </div>
+
+        <div class="cell" data-sc="https://soundcloud.com/YOUR_USERNAME/track-9" data-title="Copper Dusk" data-sub="3:52 · Solo Piano">
+          <img src="https://images.unsplash.com/photo-1504608524841-42fe6f032b4b?w=600&q=80" alt="Copper Dusk" />
+          <div class="cell__overlay">
+            <span class="cell__title">Copper Dusk</span>
+            <span class="cell__sub">3:52 · Solo Piano</span>
+          </div>
+          <div class="cell__play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+        </div>
+
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Mobile sidebar toggle -->
+  <button class="mobile-toggle" id="mobileToggle" aria-label="Toggle sidebar">
+    <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+
+  <!-- Hidden SoundCloud widget player -->
+  <iframe id="scPlayer" width="0" height="0" style="position:absolute;left:-9999px;"
+    scrolling="no" frameborder="no" allow="autoplay"
+    src="https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/0&auto_play=false&show_artwork=false">
+  </iframe>
+
+  <!-- SoundCloud Widget API -->
+  <script src="https://w.soundcloud.com/player/api.js"></script>
+
+  <!-- ============================================
+       JAVASCRIPT
+       ============================================ -->
+  <script>
+    (() => {
+      /* ── Icon markup ── */
+      const PLAY  = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+      const PAUSE = '<svg viewBox="0 0 24 24"><path d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg>';
+      const EQ    = '<div class="eq-bars"><span></span><span></span><span></span><span></span></div>';
+
+      /* ── DOM refs ── */
+      const iframe  = document.getElementById('scPlayer');
+      const widget  = SC.Widget(iframe);
+      const cells   = document.querySelectorAll('.cell');
+      const npBar   = document.getElementById('nowPlaying');
+      const npTitle = document.getElementById('npTitle');
+      const npBtn   = document.getElementById('npBtn');
+      const sidebar = document.getElementById('sidebar');
+      const mobBtn  = document.getElementById('mobileToggle');
+
+      let activeCell  = null;
+      let isPlaying   = false;
+      let currentUrl  = null;
+
+      /* ── SoundCloud widget events ── */
+      widget.bind(SC.Widget.Events.FINISH, () => {
+        setPlaying(false);
+        // Auto-advance to next cell
+        const arr = [...cells];
+        const idx = arr.indexOf(activeCell);
+        if (idx < arr.length - 1) arr[idx + 1].click();
+      });
+
+      widget.bind(SC.Widget.Events.PLAY, () => setPlaying(true));
+      widget.bind(SC.Widget.Events.PAUSE, () => setPlaying(false));
+
+      /* ── Click a cell → play / pause that track ── */
+      cells.forEach(cell => {
+        cell.addEventListener('click', () => {
+          const scUrl = cell.dataset.sc;
+          const title = cell.dataset.title;
+
+          /* Same cell, currently playing → pause */
+          if (activeCell === cell && isPlaying) {
+            widget.pause();
+            return;
+          }
+
+          /* Same cell, paused → resume */
+          if (activeCell === cell && !isPlaying) {
+            widget.play();
+            return;
+          }
+
+          /* Different cell → load new track */
+          if (activeCell) activeCell.classList.remove('is-playing');
+          activeCell = cell;
+          cell.classList.add('is-playing');
+          currentUrl = scUrl;
+
+          widget.load(scUrl, { auto_play: true, show_artwork: false });
+
+          npTitle.textContent = title;
+          npBar.classList.add('active');
+        });
+      });
+
+      /* ── Sync UI to play/pause state ── */
+      function setPlaying(state) {
+        isPlaying = state;
+        if (activeCell) {
+          activeCell.querySelector('.cell__play').innerHTML = state ? EQ : PLAY;
+        }
+        npBtn.innerHTML = state ? PAUSE : PLAY;
+      }
+
+      /* ── Header now-playing button ── */
+      npBtn.addEventListener('click', () => {
+        if (!activeCell) return;
+        if (isPlaying) widget.pause();
+        else           widget.play();
+      });
+
+      /* ── Mobile sidebar toggle ── */
+      mobBtn.addEventListener('click', () => sidebar.classList.toggle('open'));
+
+      document.addEventListener('click', e => {
+        if (window.innerWidth <= 900 &&
+            sidebar.classList.contains('open') &&
+            !sidebar.contains(e.target) &&
+            !mobBtn.contains(e.target)) {
+          sidebar.classList.remove('open');
+        }
+      });
+
+      /* ── Feedback placeholder (wire to email service later) ── */
+      const fbBtn  = document.getElementById('feedbackBtn');
+      const fbText = document.getElementById('feedbackText');
+      const fbOk   = document.getElementById('feedbackSuccess');
+
+      fbBtn.addEventListener('click', () => {
+        const msg = fbText.value.trim();
+        if (!msg) return;
+        // TODO: wire to Formspree / EmailJS / your backend
+        console.log('Feedback:', msg);
+        fbText.value = '';
+        fbOk.style.display = 'block';
+        setTimeout(() => { fbOk.style.display = 'none'; }, 4000);
+      });
+
+    })();
+  </script>
+
+</body>
+</html>
