@@ -395,7 +395,7 @@
 
     /* Active / currently playing state */
     .cell.is-playing::after {
-      border-color: var(--accent) !important;
+      border-color: transparent !important;
       top: 6px; left: 6px; right: 6px; bottom: 6px;
     }
 
@@ -728,7 +728,10 @@
           }
 
           /* Different cell → load new track */
-          if (activeCell) activeCell.classList.remove('is-playing');
+          if (activeCell) {
+            activeCell.classList.remove('is-playing');
+            activeCell.querySelector('.cell__play').innerHTML = PLAY;
+          }
           activeCell = cell;
           cell.classList.add('is-playing');
           currentUrl = scUrl;
