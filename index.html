@@ -301,7 +301,23 @@
     /* =============================================
        MAIN CONTENT AREA — SEAMLESS IMAGE GRID
        ============================================= */
-    .content { flex: 1; min-width: 0; background: linear-gradient(180deg, var(--bg-deep) 0%, #0b0908 100%); }
+    .content {
+      flex: 1;
+      min-width: 0;
+      background:
+        /* Brushed-metal diagonal hairlines */
+        repeating-linear-gradient(
+          135deg,
+          transparent,
+          transparent 2px,
+          rgba(155, 164, 171, 0.02) 2px,
+          rgba(155, 164, 171, 0.02) 3px
+        ),
+        /* Warm vignette from center */
+        radial-gradient(ellipse at 50% 30%, rgba(196, 112, 63, 0.04) 0%, transparent 70%),
+        /* Base warm gradient */
+        linear-gradient(180deg, #0d0b0a 0%, #080706 100%);
+    }
 
     .grid {
       display: grid;
